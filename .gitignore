@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+dist-electron/preload.js
+dist-electron/main.js
+dist-electron/preload.js
+dist-electron/main.js

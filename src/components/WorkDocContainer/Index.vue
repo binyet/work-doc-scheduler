@@ -13,6 +13,7 @@ import { VueDraggable } from 'vue-draggable-plus';
 
 import { Draggable } from '@fullcalendar/interaction';
 import { getDateChanged } from '@/mitt/dateChange';
+import { useAppStoreWithOut } from '@/service/store/module/app';
 
 // Electron API 的类型声明
 declare const window: Window & {
@@ -28,6 +29,8 @@ const containerRef = ref<HTMLElement | null>(null);
 const currDatas = ref<Array<any>>([]);
 
 const dragEnter = ref(false);
+
+const dbHelper = useAppStoreWithOut().getIndexedDb;
 
 const handleDragOver = (event: DragEvent) => {
   event.preventDefault();
