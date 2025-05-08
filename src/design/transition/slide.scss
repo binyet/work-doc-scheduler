@@ -1,0 +1,39 @@
+@mixin slide-y-transition {
+  @include transition-default();
+
+  &-enter-from,
+  &-leave-to {
+    transform: translateY(-15px);
+    opacity: 0;
+  }
+}
+
+@mixin slide-y-reverse-transition {
+  @include transition-default();
+
+  &-enter-from,
+  &-leave-to {
+    transform: translateY(15px);
+    opacity: 0;
+  }
+}
+
+@mixin slide-x-transition {
+  @include transition-default();
+
+  &-enter-from,
+  &-leave-to {
+    transform: translateX(-15px);
+    opacity: 0;
+  }
+}
+
+@mixin slide-x-reverse-transition {
+  @include transition-default();
+
+  &-enter-from,
+  &-leave-to {
+    transform: translateX(15px);
+    opacity: 0;
+  }
+}

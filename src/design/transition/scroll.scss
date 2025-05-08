@@ -1,0 +1,67 @@
+@mixin scroll-y-transition {
+  @include transition-default();
+
+  &-enter-from,
+  &-leave-to {
+    opacity: 0;
+  }
+
+  &-enter-from {
+    transform: translateY(-15px);
+  }
+
+  &-leave-to {
+    transform: translateY(15px);
+  }
+}
+
+@mixin scroll-y-reverse-transition {
+  @include transition-default();
+
+  &-enter-from,
+  &-leave-to {
+    opacity: 0;
+  }
+
+  &-enter-from {
+    transform: translateY(15px);
+  }
+
+  &-leave-to {
+    transform: translateY(-15px);
+  }
+}
+
+@mixin scroll-x-transition {
+  @include transition-default();
+
+  &-enter-from,
+  &-leave-to {
+    opacity: 0;
+  }
+
+  &-enter-from {
+    transform: translateX(-15px);
+  }
+
+  &-leave-to {
+    transform: translateX(15px);
+  }
+}
+
+@mixin scroll-x-reverse-transition {
+  @include transition-default();
+
+  &-enter-from,
+  &-leave-to {
+    opacity: 0;
+  }
+
+  &-enter-from {
+    transform: translateX(15px);
+  }
+
+  &-leave-to {
+    transform: translateX(-15px);
+  }
+}

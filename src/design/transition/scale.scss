@@ -1,0 +1,21 @@
+@mixin scale-transition {
+  @include transition-default();
+
+  &-enter-from,
+  &-leave,
+  &-leave-to {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+@mixin scale-rotate-transition {
+  @include transition-default();
+
+  &-enter-from,
+  &-leave,
+  &-leave-to {
+    transform: scale(0) rotate(-45deg);
+    opacity: 0;
+  }
+}
