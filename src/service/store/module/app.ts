@@ -3,7 +3,7 @@ import { store } from '@/service/store';
 import { IIndexedDb, IndexedDB } from '@/service/db/indexedDb';
 
 interface AppState {
-  currDate: String | null;
+  currDate: string | null;
   indexedDB: IIndexedDb | null;
 }
 const useAppStore = defineStore('app-store', {
@@ -12,10 +12,10 @@ const useAppStore = defineStore('app-store', {
     indexedDB: null
   }),
   getters: {
-    getCurrDate(): String | null {
+    getCurrDate(): string | null {
       return this.currDate;
     },
-    getIndexedDb(): IIndexedDb | null {
+    async getIndexedDb(): Promise<IIndexedDb | null> {
       if (!this.indexedDB) {
         this.indexedDB = new IndexedDB({
           name: 'wdsDB',
@@ -30,12 +30,21 @@ const useAppStore = defineStore('app-store', {
             }
           ]
         });
+        await this.indexedDB.initDB([
+          {
+            name: 'wds',
+            options: {
+              keyPath: 'id',
+              autoIncrement: true
+            }
+          }
+        ]);
       }
       return this.indexedDB;
     }
   },
   actions: {
-    setCurrDate(date: String) {
+    setCurrDate(date: string) {
       this.currDate = date;
     },
     setIndexedDb(indexedDB: IndexedDB) {

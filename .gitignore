@@ -26,3 +26,4 @@ dist-electron/preload.js
 dist-electron/main.js
 dist-electron/preload.js
 dist-electron/main.js
+pnpm-lock.yaml

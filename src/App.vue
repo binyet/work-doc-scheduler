@@ -1,4 +1,9 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { $dayjs } from './plugins/global';
+import { useAppStoreWithOut } from './service/store/module/app';
+
+useAppStoreWithOut().setCurrDate($dayjs(new Date()).format('YYYY年MM月DD日'));
+</script>
 
 <template>
   <div id="main">

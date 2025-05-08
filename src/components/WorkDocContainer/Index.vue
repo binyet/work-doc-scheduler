@@ -30,22 +30,22 @@ const currDatas = ref<Array<any>>([]);
 
 const dragEnter = ref(false);
 
-const dbHelper = useAppStoreWithOut().getIndexedDb;
+const dbHelper = await useAppStoreWithOut().getIndexedDb;
 
-const handleDragOver = (event: DragEvent) => {
+function handleDragOver(event: DragEvent) {
   event.preventDefault();
-};
+}
 
-const handleDragEnter = () => {
+function handleDragEnter() {
   dragEnter.value = true;
-};
+}
 
-const handleDragLeave = (e: any) => {
+function handleDragLeave(e: any) {
   dragEnter.value = false;
   console.log('dragLeave', e);
-};
+}
 
-const handleFileDrop = async (e: DragEvent) => {
+async function handleFileDrop(e: DragEvent) {
   e.preventDefault();
   dragEnter.value = false;
   // Handle file drop logic here
@@ -57,16 +57,32 @@ const handleFileDrop = async (e: DragEvent) => {
     const file = files[i];
     // 通过 electronAPI 获取路径
     const path = (await electronAPI.value.getFilePath(file)) || '路径不可用';
-    console.log('文件路径:', path);
     if (file.size / 1024 / 1024 > 10) {
       console.log('文件不能大于10M。');
       continue;
     }
     var event = file;
-    Object.assign(event, { id: path, title: file.name });
+    Object.assign(event, { id: path, title: file.name, ddlDate: useAppStoreWithOut().getCurrDate });
     currDatas.value.push(event);
   }
-};
+
+  await saveData();
+}
+
+async function saveData(): Promise<void> {
+  var dbDatas = await dbHelper?.query('wds', {
+    filter: (p: any) => p.ddlDate == useAppStoreWithOut().getCurrDate
+  })!;
+  var needAddFileInfos: any[] = [];
+  currDatas?.value.forEach((item) => {
+    if (dbDatas.findIndex((p: any) => p.path == item.path) < 0) {
+      needAddFileInfos.push(item);
+    }
+  });
+  if (needAddFileInfos.length > 0) {
+    await dbHelper?.bulkAdd('wds', needAddFileInfos);
+  }
+}
 
 onMounted(async () => {
   electronAPI.value = window.electronAPI;
@@ -88,6 +104,14 @@ getDateChanged((lastDate: any) => {
   // 在这里处理接收到的日期数据
   // 例如，更新组件的状态或执行其他操作
 });
+
+async function initData(): Promise<void> {
+  currDatas.value = await dbHelper?.query('wds', {
+    filter: (p: any) => p.ddlDate == useAppStoreWithOut().getCurrDate
+  })!;
+  console.log(currDatas.value);
+}
+await initData();
 </script>
 
 <style scoped lang="scss">

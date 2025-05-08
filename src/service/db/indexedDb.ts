@@ -17,6 +17,7 @@ type QueryCondition<T> = {
 };
 
 export interface IIndexedDb {
+  initDB(stores: DBOptions['stores']): Promise<void>;
   add<T>(storeName: string, data: T): Promise<IDBValidKey>;
   bulkAdd<T>(storeName: string, items: T[]): Promise<IDBValidKey[]>;
   put<T>(storeName: string, data: T, key?: IDBValidKey): Promise<IDBValidKey>;
@@ -36,10 +37,9 @@ export class IndexedDB implements IIndexedDb {
   constructor(options: DBOptions) {
     this.dbName = options.name;
     this.dbVersion = options.version || 1;
-    this.initDB(options.stores);
   }
 
-  private initDB(stores: DBOptions['stores']): Promise<void> {
+  initDB(stores: DBOptions['stores']): Promise<void> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.dbVersion);
 
