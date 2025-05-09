@@ -51,6 +51,13 @@ electron.app.on("activate", () => {
     createWindow();
   }
 });
+electron.ipcMain.on("open-file", (event, args) => {
+  electron.shell.openPath(args[0]).then(() => {
+    console.log("open file success", args[0]);
+  }).catch((error) => {
+    console.error("open file error", args[0]);
+  });
+});
 electron.app.whenReady().then(createWindow);
 exports.MAIN_DIST = MAIN_DIST;
 exports.RENDERER_DIST = RENDERER_DIST;

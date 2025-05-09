@@ -26,6 +26,8 @@ declare const window: Window & {
 const electronAPI = ref<any>(null);
 const currSelectDate = ref<DateClickArg | null>(null);
 const dbHelper = await useAppStoreWithOut().getIndexedDb;
+let lastClickTime = 0;
+let clickTimeout: any;
 
 // 日历配置
 const calendarOptions = reactive<CalendarOptions>({
@@ -76,8 +78,28 @@ function dateClick(info: DateClickArg) {
 }
 
 // 事件点击处理
-function handleEventClick(info: any) {
-  alert(`文件: ${info.event.id}`);
+async function handleEventClick(info: any) {
+  const currentTime = new Date().getTime();
+  const timeDiff = currentTime - lastClickTime;
+
+  clearTimeout(clickTimeout);
+
+  if (timeDiff < 300) {
+    // 300ms内两次点击视为双击
+    await handleEventDoubleClick(info);
+  } else {
+    clickTimeout = setTimeout(() => {
+      handleEventSingleClick(info); // 单机处理
+    }, 310);
+  }
+
+  lastClickTime = currentTime;
+}
+
+async function handleEventSingleClick(info: any) {}
+
+async function handleEventDoubleClick(info: any) {
+  await electronAPI.value.openFileSender(info.event.id);
 }
 
 // 为文件创建日历事件标记

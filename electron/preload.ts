@@ -27,5 +27,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   process: process,
   getFilePath: (file: any) => {
     return webUtils.getPathForFile(file);
+  },
+  openFileSender(path: string) {
+    return ipcRenderer.send('open-file', [path]);
   }
 });

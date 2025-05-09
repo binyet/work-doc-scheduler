@@ -1,7 +1,7 @@
 <template>
   <div class="container" ref="containerRef" :class="{ 'drag-enter': dragEnter }" @dragover="handleDragOver" @dragenter="handleDragEnter" @drop="handleFileDrop" @dragleave="handleDragLeave">
     <VueDraggable v-model="currDatas" :animation="150" item-key="path" @start="dragging = true" @end="dragging = false">
-      <div v-for="(item, index) in currDatas" :key="index" class="list-group-item">
+      <div v-for="(item, index) in currDatas" :key="index" class="list-group-item" v-on:dblclick="handleDblClick(item)">
         <span :data-event="JSON.stringify(item)" class="list-group-item-span">{{ item.name }}</span>
       </div>
     </VueDraggable>
@@ -42,7 +42,6 @@ function handleDragEnter() {
 
 function handleDragLeave(e: any) {
   dragEnter.value = false;
-  console.log('dragLeave', e);
 }
 
 async function handleFileDrop(e: DragEvent) {
@@ -101,7 +100,6 @@ onMounted(async () => {
   new Draggable(containerRef.value!, {
     itemSelector: '.list-group-item-span',
     eventData: (event) => {
-      console.log('eventData', event);
       return JSON.parse(event.dataset.event!);
     }
   });
@@ -109,7 +107,6 @@ onMounted(async () => {
 
 getDateChanged(async (lastDate: any) => {
   await initData();
-  console.log('接收到的日期数据:', lastDate);
   // 在这里处理接收到的日期数据
   // 例如，更新组件的状态或执行其他操作
 });
@@ -118,7 +115,10 @@ async function initData(): Promise<void> {
   currDatas.value = await dbHelper?.query('wds', {
     filter: (p: any) => p.ddlDate == useAppStoreWithOut().getCurrDate
   })!;
-  console.log(currDatas.value);
+}
+
+async function handleDblClick(item: any) {
+  await electronAPI.value.openFileSender(item.path);
 }
 await initData();
 </script>

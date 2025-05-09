@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -72,6 +72,17 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
+});
+
+ipcMain.on('open-file', (event: any, args: any) => {
+  shell
+    .openPath(args[0])
+    .then(() => {
+      console.log('open file success', args[0]);
+    })
+    .catch((error) => {
+      console.error('open file error', args[0]);
+    });
 });
 
 app.whenReady().then(createWindow);
