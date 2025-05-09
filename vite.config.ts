@@ -4,6 +4,10 @@ import electron from 'vite-plugin-electron/simple';
 import vue from '@vitejs/plugin-vue';
 import ViteAutoImport from 'unplugin-auto-import/vite';
 
+import Components from 'unplugin-vue-components/vite';
+import topLevelAwait from 'vite-plugin-top-level-await';
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
+
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -18,6 +22,13 @@ export default defineConfig({
       dirs: ['./src/utils'],
       dts: './src/auto-imports.d.ts',
       resolvers: []
+    }),
+    Components({
+      resolvers: [ElementPlusResolver()]
+    }),
+    topLevelAwait({
+      promiseExportName: '__tla',
+      promiseImportName: (i) => `__tla_${i}`
     }),
     electron({
       main: {

@@ -1,6 +1,7 @@
 <template>
   <div class="calendar-container" @drop="handlerFileDrop" @dragover="handlerFileDragOver">
-    <FullCalendar ref="fullCalendar" :options="calendarOptions" />
+    <FullCalendar ref="fullCalendar" :options="calendarOptions" @eventContextMenu="handleEventContextMenu" />
+    <ContextMenu ref="contextMenuRef"></ContextMenu>
   </div>
 </template>
 
@@ -13,7 +14,7 @@ import { CalendarOptions } from '@fullcalendar/core';
 import { setDateChanged } from '@/mitt/dateChange';
 import { useAppStoreWithOut } from '@/service/store/module/app';
 import { $dayjs } from '@/plugins/global';
-
+import ContextMenu from '@/components/ContextMenu/Index.vue';
 // 状态变量
 const fullCalendar = ref<any>(null);
 
@@ -26,6 +27,8 @@ declare const window: Window & {
 const electronAPI = ref<any>(null);
 const currSelectDate = ref<DateClickArg | null>(null);
 const dbHelper = await useAppStoreWithOut().getIndexedDb;
+const contextMenuRef = ref<InstanceType<typeof ContextMenu>>();
+
 let lastClickTime = 0;
 let clickTimeout: any;
 
@@ -94,6 +97,12 @@ async function handleEventClick(info: any) {
   }
 
   lastClickTime = currentTime;
+}
+
+function handleEventContextMenu(info: any) {
+  info.jsEvent.preventDefault(); // 阻止默认右键菜单
+
+  contextMenuRef.value?.showContextMenu(info.jsEvent.clientX, info.jsEvent.clientY);
 }
 
 async function handleEventSingleClick(info: any) {}
