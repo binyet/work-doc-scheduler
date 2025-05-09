@@ -61,8 +61,16 @@ async function handleFileDrop(e: DragEvent) {
       console.log('文件不能大于10M。');
       continue;
     }
-    var event = file;
-    Object.assign(event, { id: path, title: file.name, ddlDate: useAppStoreWithOut().getCurrDate });
+    var event = {
+      title: file.name,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      path: path,
+      lastModified: file.lastModified,
+      ddlDate: useAppStoreWithOut().getCurrDate
+    };
+    // Object.assign(event, { id: path, title: file.name, ddlDate: useAppStoreWithOut().getCurrDate });
     currDatas.value.push(event);
   }
 
@@ -80,7 +88,7 @@ async function saveData(): Promise<void> {
     }
   });
   if (needAddFileInfos.length > 0) {
-    await dbHelper?.bulkAdd('wds', needAddFileInfos);
+    await dbHelper?.bulkAdd('wds', needAddFileInfos as any);
   }
 }
 
@@ -99,7 +107,8 @@ onMounted(async () => {
   });
 });
 
-getDateChanged((lastDate: any) => {
+getDateChanged(async (lastDate: any) => {
+  await initData();
   console.log('接收到的日期数据:', lastDate);
   // 在这里处理接收到的日期数据
   // 例如，更新组件的状态或执行其他操作

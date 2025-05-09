@@ -3,8 +3,9 @@ import App from './App.vue';
 import router from './router';
 import '@/assets/main.css';
 import '@/design/index.scss';
-import { globalInstall } from './plugins/global';
-import { setupStore } from './service/store';
+import { globalInstall } from '@/plugins/global';
+import { setupStore } from '@/service/store';
+import { useAppStoreWithOut } from '@/service/store/module/app';
 
 async function startup() {
   const app = createApp(App);
@@ -12,6 +13,8 @@ async function startup() {
   app.use(router);
   app.use(globalInstall);
   setupStore(app);
+  await useAppStoreWithOut().InitIndexedDb();
+
   app.mount('#app').$nextTick(() => {
     // Use contextBridge
     window.ipcRenderer?.on('main-process-message', (_event, message) => {

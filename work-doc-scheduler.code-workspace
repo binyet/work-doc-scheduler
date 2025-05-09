@@ -34,6 +34,7 @@
     },
     "vetur.validation.script": false,
     "vetur.experimental.templateInterpolationService": false,
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "files.autoSave": "off"
   }
 }

@@ -2,7 +2,7 @@
 import { $dayjs } from './plugins/global';
 import { useAppStoreWithOut } from './service/store/module/app';
 
-useAppStoreWithOut().setCurrDate($dayjs(new Date()).format('YYYY年MM月DD日'));
+useAppStoreWithOut().setCurrDate($dayjs(new Date()).format('YYYY-MM-DD'));
 </script>
 
 <template>

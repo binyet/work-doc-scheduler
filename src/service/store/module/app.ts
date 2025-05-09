@@ -16,6 +16,14 @@ const useAppStore = defineStore('app-store', {
       return this.currDate;
     },
     async getIndexedDb(): Promise<IIndexedDb | null> {
+      return this.indexedDB;
+    }
+  },
+  actions: {
+    setCurrDate(date: string) {
+      this.currDate = date;
+    },
+    async InitIndexedDb() {
       if (!this.indexedDB) {
         this.indexedDB = new IndexedDB({
           name: 'wdsDB',
@@ -40,15 +48,6 @@ const useAppStore = defineStore('app-store', {
           }
         ]);
       }
-      return this.indexedDB;
-    }
-  },
-  actions: {
-    setCurrDate(date: string) {
-      this.currDate = date;
-    },
-    setIndexedDb(indexedDB: IndexedDB) {
-      this.indexedDB = indexedDB;
     }
   }
 });

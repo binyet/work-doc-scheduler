@@ -85,7 +85,7 @@ export class IndexedDB implements IIndexedDb {
   async add<T>(storeName: string, data: T): Promise<IDBValidKey> {
     return new Promise((resolve, reject) => {
       const store = this.getObjectStore(storeName, 'readwrite');
-      const request = store.add(data);
+      const request = store.add(JSON.parse(JSON.stringify(data)));
 
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(new Error(`Failed to add data: ${request.error}`));

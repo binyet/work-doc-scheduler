@@ -11,6 +11,8 @@ import interactionPlugin, { DateClickArg } from '@fullcalendar/interaction';
 import zhCnLocale from '@fullcalendar/core/locales/zh-cn';
 import { CalendarOptions } from '@fullcalendar/core';
 import { setDateChanged } from '@/mitt/dateChange';
+import { useAppStoreWithOut } from '@/service/store/module/app';
+import { $dayjs } from '@/plugins/global';
 
 // 状态变量
 const fullCalendar = ref<any>(null);
@@ -23,6 +25,7 @@ declare const window: Window & {
 };
 const electronAPI = ref<any>(null);
 const currSelectDate = ref<DateClickArg | null>(null);
+const dbHelper = await useAppStoreWithOut().getIndexedDb;
 
 // 日历配置
 const calendarOptions = reactive<CalendarOptions>({
@@ -157,12 +160,26 @@ const handlerFileDragOver = function (e: any) {
 };
 
 // 设置全局拖拽事件处理
-onMounted(() => {
+onMounted(async () => {
   electronAPI.value = window.electronAPI;
   if (!electronAPI.value) {
     console.error('electronAPI未正确加载，请检查预加载脚本配置');
   }
+
+  await initDocData();
 });
+
+async function initDocData() {
+  var startDate = $dayjs(new Date(fullCalendar.value.getApi().currentData.viewApi.currentStart)).format('YYYY-MM-DD');
+  var endDate = $dayjs(new Date(fullCalendar.value.getApi().currentData.viewApi.currentEnd)).format('YYYY-MM-DD');
+  var files = await dbHelper?.query('wds', {
+    filter: (p: any) => p.ddlDate >= startDate && p.ddlDate <= endDate
+  });
+
+  files?.forEach((file) => {
+    createEventForFile(file.path, file.name, file.ddlDate);
+  });
+}
 </script>
 
 <style scoped>
