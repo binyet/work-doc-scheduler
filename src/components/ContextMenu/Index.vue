@@ -27,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-const visible = ref(false);
+const visible = ref(true);
 const position = ref({ x: 0, y: 0 });
 
 function handleMenuVisibleChange(visible: boolean) {}

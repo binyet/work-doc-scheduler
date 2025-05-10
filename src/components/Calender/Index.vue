@@ -1,7 +1,7 @@
 <template>
   <div class="calendar-container" @drop="handlerFileDrop" @dragover="handlerFileDragOver">
     <FullCalendar ref="fullCalendar" :options="calendarOptions" @eventContextMenu="handleEventContextMenu" />
-    <ContextMenu ref="contextMenuRef"></ContextMenu>
+    <context-menu ref="contextMenuRef"></context-menu>
   </div>
 </template>
 
