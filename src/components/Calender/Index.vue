@@ -1,6 +1,6 @@
 <template>
   <div class="calendar-container" @drop="handlerFileDrop" @dragover="handlerFileDragOver">
-    <FullCalendar ref="fullCalendar" :options="calendarOptions" @eventContextMenu="handleEventContextMenu" />
+    <FullCalendar ref="fullCalendarRef" :options="calendarOptions" />
     <context-menu ref="contextMenuRef"></context-menu>
   </div>
 </template>
@@ -10,13 +10,14 @@ import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin, { DateClickArg } from '@fullcalendar/interaction';
 import zhCnLocale from '@fullcalendar/core/locales/zh-cn';
-import { CalendarOptions } from '@fullcalendar/core';
+import { CalendarOptions, EventMountArg } from '@fullcalendar/core';
 import { setDateChanged } from '@/mitt/dateChange';
 import { useAppStoreWithOut } from '@/service/store/module/app';
 import { $dayjs } from '@/plugins/global';
 import ContextMenu from '@/components/ContextMenu/Index.vue';
+import { Wds } from '@/service/store/model/FileInfo';
 // 状态变量
-const fullCalendar = ref<any>(null);
+const fullCalendarRef = ref<any>(null);
 
 // Electron API 的类型声明
 declare const window: Window & {
@@ -37,9 +38,40 @@ const calendarOptions = reactive<CalendarOptions>({
   plugins: [dayGridPlugin, interactionPlugin],
   initialView: 'dayGridMonth',
   headerToolbar: {
-    left: 'prev,next today',
+    left: 'today',
     center: 'title',
-    right: 'dayGridMonth,dayGridYear'
+    right: 'prevYearCustom,prevMonthCustom,nextMonthCustom,nextYearCustom'
+  },
+  // 自定义按钮
+  customButtons: {
+    prevYearCustom: {
+      text: '上一年',
+      click: async () => {
+        fullCalendarRef.value.getApi().prevYear();
+        await initDocData();
+      }
+    },
+    prevMonthCustom: {
+      text: '上月',
+      click: async () => {
+        fullCalendarRef.value.getApi().prev();
+        await initDocData();
+      }
+    },
+    nextMonthCustom: {
+      text: '下月',
+      click: async () => {
+        fullCalendarRef.value.getApi().next();
+        await initDocData();
+      }
+    },
+    nextYearCustom: {
+      text: '下一年',
+      click: async () => {
+        fullCalendarRef.value.getApi().nextYear();
+        await initDocData();
+      }
+    }
   },
   editable: true,
   selectable: true,
@@ -47,6 +79,7 @@ const calendarOptions = reactive<CalendarOptions>({
   dayMaxEvents: true,
   locale: zhCnLocale,
   eventClick: handleEventClick,
+  eventDidMount: eventDidMount,
   // 启用外部元素拖放功能
   droppable: true,
   // 处理拖放事件
@@ -79,6 +112,14 @@ function dateClick(info: DateClickArg) {
   dayEl.style.backgroundColor = 'rgba(76, 175, 80, 0.3)'; // 设置背景色
   setDateChanged(dateStr); // 触发日期更改事件
 }
+// 事件挂载处理 添加右键菜单
+function eventDidMount(e: EventMountArg) {
+  e.el.addEventListener('contextmenu', (event) => {
+    console.log('右键菜单事件', e);
+    event.preventDefault(); // 阻止默认右键菜单
+    contextMenuRef.value?.showContextMenu(event.clientX, event.clientY); // 显示自定义右键菜单
+  });
+}
 
 // 事件点击处理
 async function handleEventClick(info: any) {
@@ -99,28 +140,23 @@ async function handleEventClick(info: any) {
   lastClickTime = currentTime;
 }
 
-function handleEventContextMenu(info: any) {
-  info.jsEvent.preventDefault(); // 阻止默认右键菜单
-
-  contextMenuRef.value?.showContextMenu(info.jsEvent.clientX, info.jsEvent.clientY);
-}
-
 async function handleEventSingleClick(info: any) {}
 
 async function handleEventDoubleClick(info: any) {
-  await electronAPI.value.openFileSender(info.event.id);
+  await electronAPI.value.openFileSender(info.event.extendedProps.path); // 调用 Electron API 打开文件
 }
 
 // 为文件创建日历事件标记
-function createEventForFile(filePath: string, fileName: string, date: Date | undefined) {
-  if (!date) {
+function createEventForFile(file: Wds.FileInfo) {
+  if (!file.ddlDate) {
     return;
   }
   // 创建一个新事件
   const newEvent = {
-    id: filePath,
-    title: fileName,
-    start: date,
+    id: file.id,
+    title: file.name,
+    start: file.ddlDate,
+    path: file.path,
     allDay: true,
     backgroundColor: '#4285F4',
     borderColor: '#4285F4',
@@ -132,17 +168,17 @@ function createEventForFile(filePath: string, fileName: string, date: Date | und
   };
 
   // 添加事件到日历
-  if (fullCalendar.value) {
-    const calendarApi = fullCalendar.value.getApi();
+  if (fullCalendarRef.value) {
+    const calendarApi = fullCalendarRef.value.getApi();
     calendarApi.addEvent(newEvent);
   }
 }
 
 // 根据坐标获取日期单元格
 function getDateCellFromPoint(x: number, y: number): { element: HTMLElement; date: Date } | null {
-  if (!fullCalendar.value) return null;
+  if (!fullCalendarRef.value) return null;
 
-  const calendarApi = fullCalendar.value.getApi();
+  const calendarApi = fullCalendarRef.value.getApi();
   const calendarEl = calendarApi.el;
 
   // 获取所有日期单元格
@@ -176,15 +212,30 @@ const handlerFileDrop = async (e: DragEvent) => {
 
   // 检查是否有文件被拖放
   if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+    let needAddFiles: Wds.FileInfo[] = [];
     for (let i = 0; i < e.dataTransfer.files.length; i++) {
       const file = e.dataTransfer.files[i];
       const cellInfo = getDateCellFromPoint(e.clientX, e.clientY);
       const path = (await electronAPI.value.getFilePath(file)) || '路径不可用';
-      createEventForFile(path, file.name, cellInfo?.date);
+      // createEventForFile(path, file.name, cellInfo?.date);
+      let event = new Wds.FileInfo({
+        title: file.name,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        path: path,
+        lastModified: file.lastModified,
+        ddlDate: $dayjs(cellInfo?.date).format('YYYY-MM-DD')
+      });
+      needAddFiles.push(event);
     }
+    await saveData(needAddFiles);
   }
 };
-
+async function saveData(files: Wds.FileInfo[]): Promise<void> {
+  await useAppStoreWithOut().saveFileInfo(files);
+  await initDocData(files.map((p) => p.ddlDate!)); // 重新加载数据
+}
 const handlerFileDragOver = function (e: any) {
   e.preventDefault();
   e.stopPropagation();
@@ -198,17 +249,28 @@ onMounted(async () => {
   }
 
   await initDocData();
+
+  (window as any).fullCalendar = fullCalendarRef.value;
 });
 
-async function initDocData() {
-  var startDate = $dayjs(new Date(fullCalendar.value.getApi().currentData.viewApi.currentStart)).format('YYYY-MM-DD');
-  var endDate = $dayjs(new Date(fullCalendar.value.getApi().currentData.viewApi.currentEnd)).format('YYYY-MM-DD');
-  var files = await dbHelper?.query('wds', {
-    filter: (p: any) => p.ddlDate >= startDate && p.ddlDate <= endDate
-  });
+async function initDocData(searchDates: string[] = []) {
+  let files: Wds.FileInfo[] | undefined = [];
+  if (searchDates.length === 0) {
+    var startDate = $dayjs(new Date(fullCalendarRef.value.getApi().currentData.viewApi.currentStart)).format('YYYY-MM-DD');
+    var endDate = $dayjs(new Date(fullCalendarRef.value.getApi().currentData.viewApi.currentEnd)).format('YYYY-MM-DD');
+    files = await dbHelper?.query<Wds.FileInfo>('wds', {
+      filter: (p: any) => p.ddlDate >= startDate && p.ddlDate <= endDate
+    });
+  } else {
+    files = await dbHelper?.query<Wds.FileInfo>('wds', {
+      filter: (p: any) => searchDates.includes(p.ddlDate)
+    });
+  }
 
   files?.forEach((file) => {
-    createEventForFile(file.path, file.name, file.ddlDate);
+    const event = fullCalendarRef.value.getApi()?.getEventById(file.id);
+    event?.remove();
+    createEventForFile(file);
   });
 }
 </script>

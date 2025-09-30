@@ -1,7 +1,6 @@
 <template>
-  <el-dropdown ref="contextMenu" trigger="contextmenu" :visible="visible" @visible-change="handleMenuVisibleChange">
+  <el-dropdown ref="contextMenuRef" popper-class="wds-context-menu-popper" trigger="contextmenu" @visible-change="handleMenuVisibleChange">
     <div
-      class="context-menu-anchor"
       :style="{
         position: 'fixed',
         left: `${position.x}px`,
@@ -12,12 +11,12 @@
     ></div>
 
     <template #dropdown>
-      <el-dropdown-menu>
-        <el-dropdown-item @click="completeEvent" divided>
-          <el-icon><document-copy /></el-icon>
+      <el-dropdown-menu class="wds-context-menu">
+        <el-dropdown-item @click="completeEvent">
+          <el-icon><finished /></el-icon>
           <span>设置完成</span>
         </el-dropdown-item>
-        <el-dropdown-item @click="deleteEvent" divided class="danger-item">
+        <el-dropdown-item @click="deleteEvent">
           <el-icon><delete /></el-icon>
           <span>删除文档</span>
         </el-dropdown-item>
@@ -27,8 +26,12 @@
 </template>
 
 <script setup lang="ts">
-const visible = ref(true);
+import { ElDropdown } from 'element-plus';
+
+const contextMenuRef = ref<InstanceType<typeof ElDropdown>>();
+
 const position = ref({ x: 0, y: 0 });
+const currSelectedInfo = ref<any>(null);
 
 function handleMenuVisibleChange(visible: boolean) {}
 
@@ -37,14 +40,14 @@ function completeEvent() {}
 function deleteEvent() {}
 
 // 调整菜单位置防止超出视口
-function adjustMenuPosition(clickX: number, clickY: number, menuWidth = 200, menuHeight = 200) {
+function adjustMenuPosition(clickX: number, clickY: number, menuWidth = 100, menuHeight = 50) {
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
   const scrollX = window.scrollX || window.pageXOffset;
   const scrollY = window.scrollY || window.pageYOffset;
 
-  let adjustedX = clickX + scrollX;
-  let adjustedY = clickY + scrollY;
+  let adjustedX = clickX + scrollX + 50;
+  let adjustedY = clickY + scrollY - 25;
 
   // 水平方向检测
   if (clickX + menuWidth > viewportWidth) {
@@ -68,25 +71,22 @@ function adjustMenuPosition(clickX: number, clickY: number, menuWidth = 200, men
 
 function showContextMenu(x: number, y: number) {
   position.value = adjustMenuPosition(x, y);
-  visible.value = true;
+  contextMenuRef.value?.handleOpen();
+}
+
+function setCurrSelectedInfo(info: any) {
+  currSelectedInfo.value = info;
 }
 
 defineExpose({
-  showContextMenu
+  showContextMenu,
+  setCurrSelectedInfo
 });
 </script>
 
 <style scoped lang="scss">
-.context-menu-anchor {
-  pointer-events: none;
-}
-
-.danger-item {
-  color: var(--el-color-danger);
-}
-
-.danger-item:hover {
-  color: #fff;
-  background-color: var(--el-color-danger);
+.wds-context-menu {
+  background-color: white;
+  border: 1px solid #ccc;
 }
 </style>

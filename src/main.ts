@@ -3,6 +3,7 @@ import App from './App.vue';
 import router from './router';
 import '@/assets/main.css';
 import '@/design/index.scss';
+import 'element-plus/dist/index.css';
 import { globalInstall, setupElementPlusIcon } from '@/plugins/global';
 import { setupStore } from '@/service/store';
 import { useAppStoreWithOut } from '@/service/store/module/app';

@@ -1,10 +1,21 @@
 <template>
   <div class="container" ref="containerRef" :class="{ 'drag-enter': dragEnter }" @dragover="handleDragOver" @dragenter="handleDragEnter" @drop="handleFileDrop" @dragleave="handleDragLeave">
     <VueDraggable v-model="currDatas" :animation="150" item-key="path" @start="dragging = true" @end="dragging = false">
-      <div v-for="(item, index) in currDatas" :key="index" class="list-group-item" v-on:dblclick="handleDblClick(item)">
+      <div
+        v-for="(item, index) in currDatas"
+        :key="index"
+        class="list-group-item"
+        v-on:dblclick="handleDblClick(item)"
+        @contextmenu="
+          (e) => {
+            showItemContextMenu(e, item);
+          }
+        "
+      >
         <span :data-event="JSON.stringify(item)" class="list-group-item-span">{{ item.name }}</span>
       </div>
     </VueDraggable>
+    <context-menu ref="contextMenuRef"></context-menu>
   </div>
 </template>
 
@@ -14,6 +25,8 @@ import { VueDraggable } from 'vue-draggable-plus';
 import { Draggable } from '@fullcalendar/interaction';
 import { getDateChanged } from '@/mitt/dateChange';
 import { useAppStoreWithOut } from '@/service/store/module/app';
+import { Wds } from '@/service/store/model/FileInfo';
+import ContextMenu from '@/components/ContextMenu/Index.vue';
 
 // Electron API 的类型声明
 declare const window: Window & {
@@ -26,11 +39,13 @@ const dragging = ref(false);
 
 const containerRef = ref<HTMLElement | null>(null);
 
-const currDatas = ref<Array<any>>([]);
+const currDatas = ref<Array<Wds.FileInfo>>([]);
 
 const dragEnter = ref(false);
 
 const dbHelper = await useAppStoreWithOut().getIndexedDb;
+
+const contextMenuRef = ref<InstanceType<typeof ContextMenu>>();
 
 function handleDragOver(event: DragEvent) {
   event.preventDefault();
@@ -52,6 +67,7 @@ async function handleFileDrop(e: DragEvent) {
   // 获取上传的文件,files是一个数组,可能同时存在一次拖拽多个文件的情况
   const files = e.dataTransfer?.files as FileList;
 
+  let needAddFiles: Wds.FileInfo[] = [];
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     // 通过 electronAPI 获取路径
@@ -60,7 +76,7 @@ async function handleFileDrop(e: DragEvent) {
       console.log('文件不能大于10M。');
       continue;
     }
-    var event = {
+    var event = new Wds.FileInfo({
       title: file.name,
       name: file.name,
       size: file.size,
@@ -68,27 +84,16 @@ async function handleFileDrop(e: DragEvent) {
       path: path,
       lastModified: file.lastModified,
       ddlDate: useAppStoreWithOut().getCurrDate
-    };
-    // Object.assign(event, { id: path, title: file.name, ddlDate: useAppStoreWithOut().getCurrDate });
-    currDatas.value.push(event);
+    });
+    needAddFiles.push(event);
   }
 
-  await saveData();
+  await saveData(needAddFiles);
 }
 
-async function saveData(): Promise<void> {
-  var dbDatas = await dbHelper?.query('wds', {
-    filter: (p: any) => p.ddlDate == useAppStoreWithOut().getCurrDate
-  })!;
-  var needAddFileInfos: any[] = [];
-  currDatas?.value.forEach((item) => {
-    if (dbDatas.findIndex((p: any) => p.path == item.path) < 0) {
-      needAddFileInfos.push(item);
-    }
-  });
-  if (needAddFileInfos.length > 0) {
-    await dbHelper?.bulkAdd('wds', needAddFileInfos as any);
-  }
+async function saveData(files: Wds.FileInfo[]): Promise<void> {
+  await useAppStoreWithOut().saveFileInfo(files);
+  await initData();
 }
 
 onMounted(async () => {
@@ -119,6 +124,12 @@ async function initData(): Promise<void> {
 
 async function handleDblClick(item: any) {
   await electronAPI.value.openFileSender(item.path);
+}
+
+function showItemContextMenu(e: any, item: any) {
+  contextMenuRef.value?.setCurrSelectedInfo(item); // 设置当前选中的文件信息
+  e.preventDefault(); // 阻止默认右键菜单
+  contextMenuRef.value?.showContextMenu(e.clientX, e.clientY); // 显示自定义右键菜单
 }
 await initData();
 </script>

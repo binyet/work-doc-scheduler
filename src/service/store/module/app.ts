@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { store } from '@/service/store';
 import { IIndexedDb, IndexedDB } from '@/service/db/indexedDb';
+import { Wds } from '../model/FileInfo';
 
 interface AppState {
   currDate: string | null;
@@ -47,6 +48,21 @@ const useAppStore = defineStore('app-store', {
             }
           }
         ]);
+      }
+    },
+    async saveFileInfo(files: Wds.FileInfo[]) {
+      var ddlDatas = files.map((p) => p.ddlDate);
+      var dbDatas = await this.indexedDB?.query('wds', {
+        filter: (p: any) => ddlDatas.includes(p.ddlDate)
+      })!;
+      var needAddFileInfos: any[] = [];
+      files.forEach((item) => {
+        if (dbDatas.findIndex((p: any) => p.path == item.path && p.ddlDate == item.ddlDate) < 0) {
+          needAddFileInfos.push(item);
+        }
+      });
+      if (needAddFileInfos.length > 0) {
+        await this.indexedDB?.bulkAdd('wds', needAddFileInfos as any);
       }
     }
   }
