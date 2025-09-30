@@ -1,7 +1,20 @@
 <template>
   <div class="calendar-container" @drop="handlerFileDrop" @dragover="handlerFileDragOver">
     <FullCalendar ref="fullCalendarRef" :options="calendarOptions" />
-    <context-menu ref="contextMenuRef"></context-menu>
+    <context-menu ref="contextMenuRef">
+      <template #dropdown>
+        <el-dropdown-menu class="wds-context-menu">
+          <el-dropdown-item @click="completeEvent">
+            <el-icon><finished /></el-icon>
+            <span>设置完成</span>
+          </el-dropdown-item>
+          <el-dropdown-item @click="deleteEvent">
+            <el-icon><delete /></el-icon>
+            <span>删除文档</span>
+          </el-dropdown-item>
+        </el-dropdown-menu>
+      </template>
+    </context-menu>
   </div>
 </template>
 
@@ -10,12 +23,13 @@ import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin, { DateClickArg } from '@fullcalendar/interaction';
 import zhCnLocale from '@fullcalendar/core/locales/zh-cn';
-import { CalendarOptions, EventMountArg } from '@fullcalendar/core';
+import { CalendarOptions, EventDropArg, EventMountArg } from '@fullcalendar/core';
 import { setDateChanged } from '@/mitt/dateChange';
 import { useAppStoreWithOut } from '@/service/store/module/app';
 import { $dayjs } from '@/plugins/global';
 import ContextMenu from '@/components/ContextMenu/Index.vue';
 import { Wds } from '@/service/store/model/FileInfo';
+import { ElMessageBox } from 'element-plus';
 // 状态变量
 const fullCalendarRef = ref<any>(null);
 
@@ -32,6 +46,7 @@ const contextMenuRef = ref<InstanceType<typeof ContextMenu>>();
 
 let lastClickTime = 0;
 let clickTimeout: any;
+const currRightClickFileId = ref<number | null>(null);
 
 // 日历配置
 const calendarOptions = reactive<CalendarOptions>({
@@ -90,8 +105,23 @@ const calendarOptions = reactive<CalendarOptions>({
   eventOverlap: true,
   // 确保日历接收外部元素
   dropAccept: '.list-group-item, [data-event]',
-  dateClick: dateClick
+  dateClick: dateClick,
+  async eventDrop(arg) {
+    await fileDrop(arg);
+  }
 });
+
+async function fileDrop(arg: EventDropArg) {
+  var files = await dbHelper?.query('wds', {
+    filter: (p: any) => p.id == arg.event.id
+  });
+  if (!files || files.length == 0) {
+    return;
+  }
+  var file = files[0];
+  file.ddlDate = arg.event.startStr;
+  await useAppStoreWithOut().updateFileInfo(file);
+}
 
 function dateClick(info: DateClickArg) {
   const dateStr = info.dateStr;
@@ -118,6 +148,7 @@ function eventDidMount(e: EventMountArg) {
     console.log('右键菜单事件', e);
     event.preventDefault(); // 阻止默认右键菜单
     contextMenuRef.value?.showContextMenu(event.clientX, event.clientY); // 显示自定义右键菜单
+    currRightClickFileId.value = Number(e.event.id);
   });
 }
 
@@ -158,8 +189,8 @@ function createEventForFile(file: Wds.FileInfo) {
     start: file.ddlDate,
     path: file.path,
     allDay: true,
-    backgroundColor: '#4285F4',
-    borderColor: '#4285F4',
+    backgroundColor: file.isCompleted ? '#67c23a' : '#4285F4',
+    borderColor: file.isCompleted ? '#67c23a' : '#4285F4',
     // 添加自定义属性以标识这是一个文件事件
     extendedProps: {
       isFileEvent: true,
@@ -240,6 +271,48 @@ const handlerFileDragOver = function (e: any) {
   e.preventDefault();
   e.stopPropagation();
 };
+
+function completeEvent() {
+  ElMessageBox.confirm('确定要设置已完成吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  })
+    .then(async () => {
+      // 删除文件
+      var files = await dbHelper?.query('wds', {
+        filter: (p: any) => p.id == currRightClickFileId.value
+      })!;
+      if(!files || files.length == 0){
+        return ;
+      }
+      var file = files[0];
+      file.isCompleted = true;
+      await useAppStoreWithOut().updateFileInfo(file);
+      const event = fullCalendarRef.value.getApi()?.getEventById(currRightClickFileId.value!);
+      event?.setProp('backgroundColor', '#67c23a');
+      event?.setProp('borderColor', '#67c23a');
+    })
+    .catch(() => {});
+}
+
+/**
+ * 删除事件
+ */
+async function deleteEvent() {
+  ElMessageBox.confirm('确定要删除吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  })
+    .then(async () => {
+      // 删除文件
+      await useAppStoreWithOut().deleteFileInfoById(currRightClickFileId.value!);
+      const event = fullCalendarRef.value.getApi()?.getEventById(currRightClickFileId.value!);
+      event?.remove();
+    })
+    .catch(() => {});
+}
 
 // 设置全局拖拽事件处理
 onMounted(async () => {

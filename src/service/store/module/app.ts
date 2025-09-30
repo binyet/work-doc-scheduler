@@ -64,6 +64,12 @@ const useAppStore = defineStore('app-store', {
       if (needAddFileInfos.length > 0) {
         await this.indexedDB?.bulkAdd('wds', needAddFileInfos as any);
       }
+    },
+    async updateFileInfo(file: Wds.FileInfo){
+      await this.indexedDB?.put('wds', file);
+    },
+    async deleteFileInfoById(id: number){
+      await this.indexedDB?.delete('wds', id);
     }
   }
 });

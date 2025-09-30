@@ -1,5 +1,7 @@
 # Vue 3 + TypeScript + Vite
 
+node 18
+
 `pnpm install`
 
 `pnpm dev`

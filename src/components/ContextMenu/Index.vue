@@ -11,17 +11,9 @@
     ></div>
 
     <template #dropdown>
-      <el-dropdown-menu class="wds-context-menu">
-        <el-dropdown-item @click="completeEvent">
-          <el-icon><finished /></el-icon>
-          <span>设置完成</span>
-        </el-dropdown-item>
-        <el-dropdown-item @click="deleteEvent">
-          <el-icon><delete /></el-icon>
-          <span>删除文档</span>
-        </el-dropdown-item>
-      </el-dropdown-menu>
+      <slot name="dropdown"></slot>
     </template>
+    
   </el-dropdown>
 </template>
 
@@ -31,7 +23,6 @@ import { ElDropdown } from 'element-plus';
 const contextMenuRef = ref<InstanceType<typeof ElDropdown>>();
 
 const position = ref({ x: 0, y: 0 });
-const currSelectedInfo = ref<any>(null);
 
 function handleMenuVisibleChange(visible: boolean) {}
 
@@ -74,13 +65,8 @@ function showContextMenu(x: number, y: number) {
   contextMenuRef.value?.handleOpen();
 }
 
-function setCurrSelectedInfo(info: any) {
-  currSelectedInfo.value = info;
-}
-
 defineExpose({
   showContextMenu,
-  setCurrSelectedInfo
 });
 </script>
 

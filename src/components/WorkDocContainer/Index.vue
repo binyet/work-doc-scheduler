@@ -127,7 +127,6 @@ async function handleDblClick(item: any) {
 }
 
 function showItemContextMenu(e: any, item: any) {
-  contextMenuRef.value?.setCurrSelectedInfo(item); // 设置当前选中的文件信息
   e.preventDefault(); // 阻止默认右键菜单
   contextMenuRef.value?.showContextMenu(e.clientX, e.clientY); // 显示自定义右键菜单
 }

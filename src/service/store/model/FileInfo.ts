@@ -7,6 +7,7 @@ export module Wds {
     size: number | undefined;
     type: string | undefined;
     lastModified: number | undefined;
+    isCompleted: boolean | undefined;
 
     constructor(info: any) {
       if (info) {
