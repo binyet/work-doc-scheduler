@@ -28,13 +28,6 @@ import { useAppStoreWithOut } from '@/service/store/module/app';
 import { Wds } from '@/service/store/model/FileInfo';
 import ContextMenu from '@/components/ContextMenu/Index.vue';
 
-// Electron API 的类型声明
-declare const window: Window & {
-  electronAPI?: {
-    getFilePath: (file: any) => Promise<string>;
-  };
-};
-const electronAPI = ref<any>(null);
 const dragging = ref(false);
 
 const containerRef = ref<HTMLElement | null>(null);
@@ -46,6 +39,8 @@ const dragEnter = ref(false);
 const dbHelper = await useAppStoreWithOut().getIndexedDb;
 
 const contextMenuRef = ref<InstanceType<typeof ContextMenu>>();
+
+const appStore = useAppStoreWithOut();
 
 function handleDragOver(event: DragEvent) {
   event.preventDefault();
@@ -71,7 +66,7 @@ async function handleFileDrop(e: DragEvent) {
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     // 通过 electronAPI 获取路径
-    const path = (await electronAPI.value.getFilePath(file)) || '路径不可用';
+    const path = (await appStore.electronApi?.getFilePath(file)) || '路径不可用';
     if (file.size / 1024 / 1024 > 10) {
       console.log('文件不能大于10M。');
       continue;
@@ -97,11 +92,6 @@ async function saveData(files: Wds.FileInfo[]): Promise<void> {
 }
 
 onMounted(async () => {
-  electronAPI.value = window.electronAPI;
-  if (!electronAPI.value) {
-    console.error('electronAPI未正确加载，请检查预加载脚本配置');
-  }
-
   new Draggable(containerRef.value!, {
     itemSelector: '.list-group-item-span',
     eventData: (event) => {
@@ -123,7 +113,7 @@ async function initData(): Promise<void> {
 }
 
 async function handleDblClick(item: any) {
-  await electronAPI.value.openFileSender(item.path);
+  await appStore.electronApi?.openFileSender(item.path);
 }
 
 function showItemContextMenu(e: any, item: any) {

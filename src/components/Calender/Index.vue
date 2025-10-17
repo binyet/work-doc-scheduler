@@ -30,16 +30,11 @@ import { $dayjs } from '@/plugins/global';
 import ContextMenu from '@/components/ContextMenu/Index.vue';
 import { Wds } from '@/service/store/model/FileInfo';
 import { ElMessageBox } from 'element-plus';
+import { getMainSiderExpandChange } from '@/mitt/appGlobalChange';
+
 // 状态变量
 const fullCalendarRef = ref<any>(null);
 
-// Electron API 的类型声明
-declare const window: Window & {
-  electronAPI?: {
-    getFilePath: (file: any) => Promise<string>;
-  };
-};
-const electronAPI = ref<any>(null);
 const currSelectDate = ref<DateClickArg | null>(null);
 const dbHelper = await useAppStoreWithOut().getIndexedDb;
 const contextMenuRef = ref<InstanceType<typeof ContextMenu>>();
@@ -47,6 +42,8 @@ const contextMenuRef = ref<InstanceType<typeof ContextMenu>>();
 let lastClickTime = 0;
 let clickTimeout: any;
 const currRightClickFileId = ref<number | null>(null);
+
+let appStore = useAppStoreWithOut();
 
 // 日历配置
 const calendarOptions = reactive<CalendarOptions>({
@@ -174,7 +171,7 @@ async function handleEventClick(info: any) {
 async function handleEventSingleClick(info: any) {}
 
 async function handleEventDoubleClick(info: any) {
-  await electronAPI.value.openFileSender(info.event.extendedProps.path); // 调用 Electron API 打开文件
+  await appStore.electronApi?.openFileSender(info.event.extendedProps.path); // 调用 Electron API 打开文件
 }
 
 // 为文件创建日历事件标记
@@ -247,7 +244,7 @@ const handlerFileDrop = async (e: DragEvent) => {
     for (let i = 0; i < e.dataTransfer.files.length; i++) {
       const file = e.dataTransfer.files[i];
       const cellInfo = getDateCellFromPoint(e.clientX, e.clientY);
-      const path = (await electronAPI.value.getFilePath(file)) || '路径不可用';
+      const path = (await appStore.electronApi?.getFilePath(file)) || '路径不可用';
       // createEventForFile(path, file.name, cellInfo?.date);
       let event = new Wds.FileInfo({
         title: file.name,
@@ -272,7 +269,16 @@ const handlerFileDragOver = function (e: any) {
   e.stopPropagation();
 };
 
-function completeEvent() {
+async function completeEvent(): Promise<void> {
+  // var files = await dbHelper?.query('wds', {
+  //   filter: (p: any) => p.id == currRightClickFileId.value
+  // })!;
+  // var dir = new URL(files[0].path).pathname;
+  // var rst = await electronAPI.value.readDiretory('F:\\2025\\10'); // 调用 Electron API 打开文件
+  // console.log(rst);
+  // appStore.electronApi?.openDirectoryDialog()
+
+  // return;
   ElMessageBox.confirm('确定要设置已完成吗？', '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
@@ -283,8 +289,8 @@ function completeEvent() {
       var files = await dbHelper?.query('wds', {
         filter: (p: any) => p.id == currRightClickFileId.value
       })!;
-      if(!files || files.length == 0){
-        return ;
+      if (!files || files.length == 0) {
+        return;
       }
       var file = files[0];
       file.isCompleted = true;
@@ -316,10 +322,6 @@ async function deleteEvent() {
 
 // 设置全局拖拽事件处理
 onMounted(async () => {
-  electronAPI.value = window.electronAPI;
-  if (!electronAPI.value) {
-    console.error('electronAPI未正确加载，请检查预加载脚本配置');
-  }
 
   await initDocData();
 
@@ -346,6 +348,10 @@ async function initDocData(searchDates: string[] = []) {
     createEventForFile(file);
   });
 }
+
+getMainSiderExpandChange((isExpand: boolean) => {
+  fullCalendarRef.value.getApi()?.updateSize();
+});
 </script>
 
 <style scoped>

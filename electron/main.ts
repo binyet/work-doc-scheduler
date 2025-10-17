@@ -3,8 +3,10 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
+
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const { dialog } = require('electron')
 
 // The built directory structure
 //
@@ -25,6 +27,7 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist');
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST;
 
 let win: BrowserWindow | null;
+let fs: any = require('fs');
 
 function createWindow() {
   win = new BrowserWindow({
@@ -37,6 +40,8 @@ function createWindow() {
       webSecurity: false // 如果需要处理本地文件协议
     }
   });
+
+  
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
@@ -84,5 +89,47 @@ ipcMain.on('open-file', (event: any, args: any) => {
       console.error('open file error', args[0]);
     });
 });
+
+ipcMain.handle('open-directory-dialog', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory']
+  })
+  
+  if (!result.canceled && result.filePaths.length > 0) {
+    return result.filePaths[0]
+  }
+  return null
+})
+
+ipcMain.on('read-directory', async (event: any, args: string) => {   
+  try {
+    let dirPath = args[0];
+    const items = await fs.readdir(dirPath, {withFileTypes: true});
+    const folders = items.filter((p: any)=>p.isDirectory()).map((item: any) => ({
+        name: item.name,
+        path: path.join(dirPath, item.name),
+        isDirectory: true
+      }));
+          const files = items
+      .filter((item: any) => item.isFile())
+      .map((item: any) => ({
+        name: item.name,
+        path: path.join(dirPath, item.name),
+        isDirectory: false
+      }))
+
+    return {
+      success: true,
+      folders,
+      files,
+      path: dirPath
+    }
+  } catch (error) {
+    return {
+      success: false,
+      path: args[0]
+    }
+  }
+})
 
 app.whenReady().then(createWindow);

@@ -1,3 +1,4 @@
 export enum EventBusType {
-  DateChanged = 'dateChanged'
+  DateChanged = 'dateChanged',
+  MainSiderExpandChange = 'mainSiderExpandChange',
 }

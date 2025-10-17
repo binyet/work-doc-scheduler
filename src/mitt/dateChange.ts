@@ -12,3 +12,4 @@ export function getDateChanged(callback: (lastChangeDate: string) => void) {
     callback(useAppStoreWithOut().getCurrDate!);
   });
 }
+

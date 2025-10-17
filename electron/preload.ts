@@ -30,5 +30,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   openFileSender(path: string) {
     return ipcRenderer.send('open-file', [path]);
-  }
+  },
+  readDiretory(path: string) {
+    return ipcRenderer.send('read-directory', [path]);
+  },
+  openDirectoryDialog: () => ipcRenderer.invoke('open-directory-dialog')
 });

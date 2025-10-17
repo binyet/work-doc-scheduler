@@ -3,6 +3,10 @@ import { $dayjs } from './plugins/global';
 import { useAppStoreWithOut } from './service/store/module/app';
 
 useAppStoreWithOut().setCurrDate($dayjs(new Date()).format('YYYY-MM-DD'));
+
+onMounted(()=>{
+  useAppStoreWithOut().initElectronApi();
+})
 </script>
 
 <template>
