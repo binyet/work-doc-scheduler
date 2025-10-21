@@ -1,6 +1,6 @@
 <template>
   <div class="calendar-container" @drop="handlerFileDrop" @dragover="handlerFileDragOver">
-    <FullCalendar ref="fullCalendarRef" :options="calendarOptions" />
+    <FullCalendar ref="fullCalendarRef" :options="calendarOptions" class="full-calendar-main" />
     <context-menu ref="contextMenuRef">
       <template #dropdown>
         <el-dropdown-menu class="wds-context-menu">
@@ -367,6 +367,11 @@ getMainSiderExpandChange((isExpand: boolean) => {
   height: 100%;
   padding: 20px;
   position: relative;
+}
+.full-calendar-main {
+  height: 100%;
+  width: 100%;
+  overflow: auto;
 }
 .selected-day {
   background-color: #4caf50 !important;

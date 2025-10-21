@@ -1,4 +1,4 @@
-@use 'transition/index.scss';
+@import 'transition/index.scss';
 
 input:-webkit-autofill {
   box-shadow: 0 0 0 1000px white inset !important;
