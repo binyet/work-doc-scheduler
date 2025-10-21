@@ -38,6 +38,16 @@ function createWindow() {
   } else {
     win.loadFile(path.join(RENDERER_DIST, "index.html"));
   }
+  win.webContents.on("devtools-opened", () => {
+    win.webContents.executeJavaScript(
+      `
+      if (window.chrome && chrome.autofillPrivate) {
+        // 避免自动填充API调用
+      }
+    `
+    ).catch(() => {
+    });
+  });
   if (process.env.NODE_ENV === "development") {
     win.webContents.openDevTools();
   }
@@ -60,41 +70,43 @@ electron.ipcMain.on("open-file", (event, args) => {
     console.error("open file error", args[0]);
   });
 });
-electron.ipcMain.handle("open-directory-dialog", async () => {
-  const result = await dialog.showOpenDialog({
-    properties: ["openDirectory"]
-  });
+electron.ipcMain.handle("open-directory-dialog", async (event, options = {}) => {
+  const dialogOptions = {
+    properties: ["openDirectory", "createDirectory"]
+  };
+  if (options.defaultPath) {
+    dialogOptions.defaultPath = options.defaultPath;
+  }
+  if (options.title) {
+    dialogOptions.title = options.title;
+  }
+  const result = await dialog.showOpenDialog(dialogOptions);
   if (!result.canceled && result.filePaths.length > 0) {
     return result.filePaths[0];
   }
   return null;
 });
-electron.ipcMain.on("read-directory", async (event, args) => {
-  try {
-    let dirPath = args[0];
-    const items = await fs.readdir(dirPath, { withFileTypes: true });
-    const folders = items.filter((p) => p.isDirectory()).map((item) => ({
-      name: item.name,
-      path: path.join(dirPath, item.name),
-      isDirectory: true
-    }));
-    const files = items.filter((item) => item.isFile()).map((item) => ({
-      name: item.name,
-      path: path.join(dirPath, item.name),
-      isDirectory: false
-    }));
-    return {
-      success: true,
-      folders,
-      files,
-      path: dirPath
-    };
-  } catch (error) {
-    return {
-      success: false,
-      path: args[0]
-    };
-  }
+electron.ipcMain.handle("copy-file", async (event, sourcePath, destPath) => {
+  return new Promise((resolve, reject) => {
+    fs.copyFile(sourcePath, destPath, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(true);
+      }
+    });
+  });
+});
+electron.ipcMain.handle("move-file", async (event, sourcePath, destPath) => {
+  return new Promise((resolve, reject) => {
+    fs.rename(sourcePath, destPath, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(true);
+      }
+    });
+  });
 });
 electron.app.whenReady().then(createWindow);
 exports.MAIN_DIST = MAIN_DIST;

@@ -31,6 +31,7 @@ import ContextMenu from '@/components/ContextMenu/Index.vue';
 import { Wds } from '@/service/store/model/FileInfo';
 import { ElMessageBox } from 'element-plus';
 import { getMainSiderExpandChange } from '@/mitt/appGlobalChange';
+import { FileHelper } from '@/utils/FileHelper';
 
 // 状态变量
 const fullCalendarRef = ref<any>(null);
@@ -270,36 +271,43 @@ const handlerFileDragOver = function (e: any) {
 };
 
 async function completeEvent(): Promise<void> {
-  // var files = await dbHelper?.query('wds', {
-  //   filter: (p: any) => p.id == currRightClickFileId.value
-  // })!;
-  // var dir = new URL(files[0].path).pathname;
-  // var rst = await electronAPI.value.readDiretory('F:\\2025\\10'); // 调用 Electron API 打开文件
-  // console.log(rst);
-  // appStore.electronApi?.openDirectoryDialog()
+  var files = await dbHelper?.query('wds', {
+    filter: (p: any) => p.id == currRightClickFileId.value
+  })!;
 
-  // return;
-  ElMessageBox.confirm('确定要设置已完成吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  })
-    .then(async () => {
-      // 删除文件
-      var files = await dbHelper?.query('wds', {
-        filter: (p: any) => p.id == currRightClickFileId.value
-      })!;
-      if (!files || files.length == 0) {
-        return;
-      }
-      var file = files[0];
-      file.isCompleted = true;
-      await useAppStoreWithOut().updateFileInfo(file);
-      const event = fullCalendarRef.value.getApi()?.getEventById(currRightClickFileId.value!);
-      event?.setProp('backgroundColor', '#67c23a');
-      event?.setProp('borderColor', '#67c23a');
-    })
-    .catch(() => {});
+  var fileInfo = FileHelper.parseFilePath(files[0].path);
+  console.log(fileInfo.dir);
+
+  var rst = await appStore.electronApi?.openDirectoryDialog({
+    title: '选择归档路径',
+    defaultPath: fileInfo.dir
+  });
+  if (!rst) {
+    return;
+  }
+
+  var dstPath = rst + '/' + fileInfo.base;
+  var copyRst = await appStore.electronApi?.moveFile(files[0].path, dstPath);
+  if (!copyRst) {
+    ElMessageBox({
+      message: '文件移动失败！',
+      type: 'error'
+    });
+    return;
+  }
+  var files = await dbHelper?.query('wds', {
+    filter: (p: any) => p.id == currRightClickFileId.value
+  })!;
+  if (!files || files.length == 0) {
+    return;
+  }
+  var file = files[0];
+  file.isCompleted = true;
+  file.path = dstPath;
+  await useAppStoreWithOut().updateFileInfo(file);
+  const event = fullCalendarRef.value.getApi()?.getEventById(currRightClickFileId.value!);
+  event?.setProp('backgroundColor', '#67c23a');
+  event?.setProp('borderColor', '#67c23a');
 }
 
 /**
@@ -322,7 +330,6 @@ async function deleteEvent() {
 
 // 设置全局拖拽事件处理
 onMounted(async () => {
-
   await initDocData();
 
   (window as any).fullCalendar = fullCalendarRef.value;

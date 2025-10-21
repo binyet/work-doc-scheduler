@@ -28,8 +28,7 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   openFileSender(path) {
     return electron.ipcRenderer.send("open-file", [path]);
   },
-  readDiretory(path) {
-    return electron.ipcRenderer.send("read-directory", [path]);
-  },
-  openDirectoryDialog: () => electron.ipcRenderer.invoke("open-directory-dialog")
+  openDirectoryDialog: (options = {}) => electron.ipcRenderer.invoke("open-directory-dialog", options),
+  copyFile: (sourcePath, destPath) => electron.ipcRenderer.invoke("copy-file", sourcePath, destPath),
+  moveFile: (sourcePath, destPath) => electron.ipcRenderer.invoke("move-file", sourcePath, destPath)
 });

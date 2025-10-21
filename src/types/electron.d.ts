@@ -4,14 +4,9 @@
 export class ElectronApi {
   openFileSender: (file: any) => Promise<void>;
   getFilePath: (file: any) => Promise<string>;
-  readDirectory: (dirPath: string) => Promise<{
-    success: boolean;
-    folders: Array<{ name: string; path: string; isDirectory: boolean }>;
-    files: Array<{ name: string; path: string; isDirectory: boolean }>;
-    path: string;
-    error?: string;
-  }>;
-  openDirectoryDialog: () => Promise<string | null>;
+  openDirectoryDialog: (options = {}) => Promise<string | null>;
+  copyFile: (sourcePath: string, destPath: string) => Promise<any>;
+  moveFile: (sourcePath: string, destPath: string) => Promise<any>;
 }
 
 declare global {

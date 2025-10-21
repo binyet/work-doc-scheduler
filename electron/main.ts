@@ -3,10 +3,9 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const { dialog } = require('electron')
+const { dialog } = require('electron');
 
 // The built directory structure
 //
@@ -41,8 +40,6 @@ function createWindow() {
     }
   });
 
-  
-
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
     win?.webContents.send('main-process-message', new Date().toLocaleString());
@@ -54,6 +51,18 @@ function createWindow() {
     // win.loadFile('dist/index.html')
     win.loadFile(path.join(RENDERER_DIST, 'index.html'));
   }
+  // 移除可能导致自动填充错误的调试功能
+  win.webContents.on('devtools-opened', () => {
+    win!.webContents
+      .executeJavaScript(
+        `
+      if (window.chrome && chrome.autofillPrivate) {
+        // 避免自动填充API调用
+      }
+    `
+      )
+      .catch(() => {});
+  });
 
   // 开发模式下打开DevTools检查错误
   if (process.env.NODE_ENV === 'development') {
@@ -90,46 +99,48 @@ ipcMain.on('open-file', (event: any, args: any) => {
     });
 });
 
-ipcMain.handle('open-directory-dialog', async () => {
-  const result = await dialog.showOpenDialog({
-    properties: ['openDirectory']
-  })
-  
+ipcMain.handle('open-directory-dialog', async (event: any, options = {}) => {
+  // 如果有默认路径，且路径存在，则设置默认路径
+  const dialogOptions: any = {
+    properties: ['openDirectory', 'createDirectory']
+  };
+  if (options.defaultPath) {
+    dialogOptions.defaultPath = options.defaultPath;
+  }
+  // 添加标题
+  if (options.title) {
+    dialogOptions.title = options.title;
+  }
+  const result = await dialog.showOpenDialog(dialogOptions);
+
   if (!result.canceled && result.filePaths.length > 0) {
-    return result.filePaths[0]
+    return result.filePaths[0];
   }
-  return null
-})
+  return null;
+});
 
-ipcMain.on('read-directory', async (event: any, args: string) => {   
-  try {
-    let dirPath = args[0];
-    const items = await fs.readdir(dirPath, {withFileTypes: true});
-    const folders = items.filter((p: any)=>p.isDirectory()).map((item: any) => ({
-        name: item.name,
-        path: path.join(dirPath, item.name),
-        isDirectory: true
-      }));
-          const files = items
-      .filter((item: any) => item.isFile())
-      .map((item: any) => ({
-        name: item.name,
-        path: path.join(dirPath, item.name),
-        isDirectory: false
-      }))
+ipcMain.handle('copy-file', async (event: any, sourcePath: string, destPath: string) => {
+  return new Promise((resolve, reject) => {
+    fs.copyFile(sourcePath, destPath, (err: any) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(true);
+      }
+    });
+  });
+});
 
-    return {
-      success: true,
-      folders,
-      files,
-      path: dirPath
-    }
-  } catch (error) {
-    return {
-      success: false,
-      path: args[0]
-    }
-  }
-})
+ipcMain.handle('move-file', async (event: any, sourcePath: string, destPath: string) => {
+  return new Promise((resolve, reject) => {
+    fs.rename(sourcePath, destPath, (err: any) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(true);
+      }
+    });
+  });
+});
 
 app.whenReady().then(createWindow);

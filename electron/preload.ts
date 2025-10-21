@@ -31,8 +31,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFileSender(path: string) {
     return ipcRenderer.send('open-file', [path]);
   },
-  readDiretory(path: string) {
-    return ipcRenderer.send('read-directory', [path]);
-  },
-  openDirectoryDialog: () => ipcRenderer.invoke('open-directory-dialog')
+  openDirectoryDialog: (options = {}) => ipcRenderer.invoke('open-directory-dialog', options),
+  copyFile: (sourcePath: string, destPath: string) => ipcRenderer.invoke('copy-file', sourcePath, destPath),
+  moveFile: (sourcePath: string, destPath: string) => ipcRenderer.invoke('move-file', sourcePath, destPath)
 });
