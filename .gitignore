@@ -27,3 +27,7 @@ release
 pnpm-lock.yaml
 electron-builder.json5
 release/0.0.1/builder-effective-config.yaml
+dist-electron/main.js
+dist-electron/preload.js
+dist-electron/main.js
+dist-electron/preload.js

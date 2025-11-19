@@ -265,10 +265,11 @@ async function saveData(files: Wds.FileInfo[]): Promise<void> {
   await useAppStoreWithOut().saveFileInfo(files);
   await initDocData(files.map((p) => p.ddlDate!)); // 重新加载数据
 }
-const handlerFileDragOver = function (e: any) {
+
+function handlerFileDragOver(e: any) {
   e.preventDefault();
   e.stopPropagation();
-};
+}
 
 async function completeEvent(): Promise<void> {
   var files = await dbHelper?.query('wds', {
@@ -287,7 +288,12 @@ async function completeEvent(): Promise<void> {
   }
 
   var dstPath = rst + '/' + fileInfo.base;
-  var copyRst = await appStore.electronApi?.moveFile(files[0].path, dstPath);
+  var copyRst = false;
+  try {
+    copyRst = await appStore.electronApi?.moveFile(files[0].path, dstPath);
+  } catch (error) {
+    copyRst = false;
+  }
   if (!copyRst) {
     ElMessageBox({
       message: '文件移动失败！',
@@ -306,6 +312,7 @@ async function completeEvent(): Promise<void> {
   file.path = dstPath;
   await useAppStoreWithOut().updateFileInfo(file);
   const event = fullCalendarRef.value.getApi()?.getEventById(currRightClickFileId.value!);
+  event.setExtendedProp('path', dstPath);
   event?.setProp('backgroundColor', '#67c23a');
   event?.setProp('borderColor', '#67c23a');
 }
@@ -328,15 +335,9 @@ async function deleteEvent() {
     .catch(() => {});
 }
 
-// 设置全局拖拽事件处理
-onMounted(async () => {
-  await initDocData();
-
-  (window as any).fullCalendar = fullCalendarRef.value;
-});
-
 async function initDocData(searchDates: string[] = []) {
   let files: Wds.FileInfo[] | undefined = [];
+
   if (searchDates.length === 0) {
     var startDate = $dayjs(new Date(fullCalendarRef.value.getApi().currentData.viewApi.currentStart)).format('YYYY-MM-DD');
     var endDate = $dayjs(new Date(fullCalendarRef.value.getApi().currentData.viewApi.currentEnd)).format('YYYY-MM-DD');
@@ -355,6 +356,13 @@ async function initDocData(searchDates: string[] = []) {
     createEventForFile(file);
   });
 }
+
+// 设置全局拖拽事件处理
+onMounted(async () => {
+  await initDocData();
+
+  (window as any).fullCalendar = fullCalendarRef.value;
+});
 
 getMainSiderExpandChange((isExpand: boolean) => {
   fullCalendarRef.value.getApi()?.updateSize();
