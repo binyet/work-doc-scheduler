@@ -7,6 +7,10 @@ export class ElectronApi {
   openDirectoryDialog: (options = {}) => Promise<string | null>;
   copyFile: (sourcePath: string, destPath: string) => Promise<any>;
   moveFile: (sourcePath: string, destPath: string) => Promise<any>;
+  checkFileExists: (filePath: string) => Promise<boolean>;
+  deleteFile: (filePath: string) => Promise<any>;
+  showItemInFolder: (filePath: string) => Promise<any>;
+  startDragFile: (filePath: string) => void;
 }
 
 declare global {

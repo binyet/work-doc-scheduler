@@ -1,11 +1,11 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, dialog, nativeImage } from 'electron';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const { dialog } = require('electron');
+const fs = require('fs');
 
 // The built directory structure
 //
@@ -26,7 +26,6 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist');
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST;
 
 let win: BrowserWindow | null;
-let fs: any = require('fs');
 
 function createWindow() {
   win = new BrowserWindow({
@@ -99,6 +98,19 @@ ipcMain.on('open-file', (event: any, args: any) => {
     });
 });
 
+ipcMain.on('start-drag-file', (event: any, filePath: string) => {
+  if (!filePath || !fs.existsSync(filePath)) {
+    return;
+  }
+  const dragIcon = nativeImage.createFromDataURL(
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAK0lEQVR4AWP4//8/AzWAiSTVgA0wCkbj0QwGQxXQmAaQkYQxQGQyAAAt8xv7v6H8tQAAAABJRU5ErkJggg=='
+  );
+  event.sender.startDrag({
+    file: filePath,
+    icon: dragIcon
+  });
+});
+
 ipcMain.handle('open-directory-dialog', async (event: any, options = {}) => {
   // 如果有默认路径，且路径存在，则设置默认路径
   const dialogOptions: any = {
@@ -141,6 +153,31 @@ ipcMain.handle('move-file', async (event: any, sourcePath: string, destPath: str
       }
     });
   });
+});
+
+ipcMain.handle('check-file-exists', async (event: any, filePath: string) => {
+  return new Promise((resolve) => {
+    fs.access(filePath, fs.constants.F_OK, (err:any) => {
+      resolve(!err);
+    });
+  });
+});
+
+ipcMain.handle('delete-file', async (event: any, filePath: string) => {
+  return new Promise((resolve, reject) => {
+    fs.unlink(filePath, (err:any) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(true);
+      }
+    });
+  });
+});
+
+ipcMain.handle('show-item-in-folder', async (event: any, filePath: string) => {
+  shell.showItemInFolder(filePath);
+  return true;
 });
 
 app.whenReady().then(createWindow);

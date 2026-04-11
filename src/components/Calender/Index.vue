@@ -12,6 +12,10 @@
             <el-icon><delete /></el-icon>
             <span>删除文档</span>
           </el-dropdown-item>
+          <el-dropdown-item @click="openFileLocation">
+            <el-icon><folder-opened /></el-icon>
+            <span>打开文件位置</span>
+          </el-dropdown-item>
         </el-dropdown-menu>
       </template>
     </context-menu>
@@ -29,9 +33,10 @@ import { useAppStoreWithOut } from '@/service/store/module/app';
 import { $dayjs } from '@/plugins/global';
 import ContextMenu from '@/components/ContextMenu/Index.vue';
 import { Wds } from '@/service/store/model/FileInfo';
-import { ElMessageBox } from 'element-plus';
+import { ElCheckbox, ElMessageBox } from 'element-plus';
 import { getMainSiderExpandChange } from '@/mitt/appGlobalChange';
 import { FileHelper } from '@/utils/FileHelper';
+import { h } from 'vue';
 
 // 状态变量
 const fullCalendarRef = ref<any>(null);
@@ -93,6 +98,7 @@ const calendarOptions = reactive<CalendarOptions>({
   locale: zhCnLocale,
   eventClick: handleEventClick,
   eventDidMount: eventDidMount,
+  eventDragStart: handleEventDragStart,
   // 启用外部元素拖放功能
   droppable: true,
   // 处理拖放事件
@@ -148,6 +154,44 @@ function eventDidMount(e: EventMountArg) {
     contextMenuRef.value?.showContextMenu(event.clientX, event.clientY); // 显示自定义右键菜单
     currRightClickFileId.value = Number(e.event.id);
   });
+
+  const filePath = e.event.extendedProps.path as string;
+  if (!filePath) {
+    return;
+  }
+
+  const titleContainer = e.el.querySelector('.fc-event-title-container');
+  if (!titleContainer) {
+    return;
+  }
+
+  const dragHandle = document.createElement('span');
+  dragHandle.className = 'file-export-drag-handle';
+  dragHandle.setAttribute('draggable', 'true');
+  dragHandle.title = '拖拽到桌面/文件夹创建副本';
+  dragHandle.textContent = '⇗';
+
+  dragHandle.addEventListener('mousedown', (event) => {
+    event.stopPropagation();
+  });
+  dragHandle.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  dragHandle.addEventListener('dragstart', (event) => {
+    event.stopPropagation();
+    if (event.dataTransfer) {
+      event.dataTransfer.setData('text/plain', filePath);
+      event.dataTransfer.effectAllowed = 'copy';
+    }
+    appStore.electronApi?.startDragFile(filePath);
+  });
+
+  titleContainer.appendChild(dragHandle);
+}
+
+function handleEventDragStart(arg: any) {
+  // 保留 FullCalendar 默认事件拖拽行为（拖拽改期）
 }
 
 // 事件点击处理
@@ -192,7 +236,8 @@ function createEventForFile(file: Wds.FileInfo) {
     // 添加自定义属性以标识这是一个文件事件
     extendedProps: {
       isFileEvent: true,
-      fileType: 'docx'
+      fileType: 'docx',
+      path: file.path
     }
   };
 
@@ -321,18 +366,75 @@ async function completeEvent(): Promise<void> {
  * 删除事件
  */
 async function deleteEvent() {
-  ElMessageBox.confirm('确定要删除吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  })
-    .then(async () => {
-      // 删除文件
-      await useAppStoreWithOut().deleteFileInfoById(currRightClickFileId.value!);
-      const event = fullCalendarRef.value.getApi()?.getEventById(currRightClickFileId.value!);
-      event?.remove();
-    })
-    .catch(() => {});
+  if (!currRightClickFileId.value) {
+    return;
+  }
+
+  const files = await dbHelper?.query<Wds.FileInfo>('wds', {
+    filter: (p: any) => p.id == currRightClickFileId.value
+  });
+  const targetFile = files?.[0];
+  const needDeleteSourceFile = ref(false);
+
+  try {
+    await ElMessageBox({
+      title: '提示',
+      type: 'warning',
+      showCancelButton: true,
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      message: () =>
+        h('div', [
+          h('div', '确定要删除吗？'),
+          h(
+            ElCheckbox,
+            {
+              modelValue: needDeleteSourceFile.value,
+              'onUpdate:modelValue': (val: unknown) => {
+                needDeleteSourceFile.value = !!val;
+              },
+              style: 'margin-top: 10px;'
+            },
+            () => '同时删除本地源文件'
+          )
+        ])
+    });
+  } catch {
+    return;
+  }
+
+  // 本地文件不存在或删除失败都不应影响数据删除
+  if (needDeleteSourceFile.value && targetFile?.path) {
+    try {
+      const fileExists = await appStore.electronApi?.checkFileExists(targetFile.path);
+      if (fileExists) {
+        await appStore.electronApi?.deleteFile(targetFile.path);
+      }
+    } catch (error) {
+      console.error('删除本地源文件失败:', error);
+    }
+  }
+
+  await useAppStoreWithOut().deleteFileInfoById(currRightClickFileId.value);
+  const event = fullCalendarRef.value.getApi()?.getEventById(currRightClickFileId.value);
+  event?.remove();
+}
+
+/**
+ * 打开文件所在位置并定位文件
+ */
+async function openFileLocation() {
+  if (!currRightClickFileId.value) {
+    return;
+  }
+  const files = await dbHelper?.query<Wds.FileInfo>('wds', {
+    filter: (p: any) => p.id == currRightClickFileId.value
+  });
+  const targetFile = files?.[0];
+  if (!targetFile?.path) {
+    return;
+  }
+  await (appStore.electronApi as any)?.showItemInFolder?.(targetFile.path);
 }
 
 async function initDocData(searchDates: string[] = []) {
@@ -401,6 +503,21 @@ getMainSiderExpandChange((isExpand: boolean) => {
   cursor: pointer;
 }
 
+:deep(.file-export-drag-handle) {
+  float: right;
+  margin-left: 6px;
+  color: #ffffff;
+  opacity: 0.9;
+  cursor: grab;
+  font-size: 12px;
+  line-height: 1;
+  user-select: none;
+}
+
+:deep(.file-export-drag-handle:hover) {
+  opacity: 1;
+}
+
 :deep(.fc-day) {
   transition: background-color 0.2s;
 }
@@ -411,11 +528,11 @@ getMainSiderExpandChange((isExpand: boolean) => {
 
 /* 覆盖 FullCalendar 默认 today 的浅黄色 */
 :deep(.fc .fc-daygrid-day.fc-day-today) {
-  background-color: #1e6fff !important;
+  background-color: #bfdbfe !important;
 }
 
 :deep(.fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number) {
-  color: #ffffff !important;
+  color: #1e3a8a !important;
   font-weight: 600;
 }
 

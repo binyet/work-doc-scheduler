@@ -22,8 +22,8 @@ const useAppStore = defineStore('app-store', {
       return this.currDate;
     },
     async getIndexedDb(): Promise<IIndexedDb | null> {
-      return this.indexedDB;
-    },
+    return this.indexedDB;
+  },
     getMainSiderIsExpand(): boolean {
       return this.mainSiderIsExpand;
     },

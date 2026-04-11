@@ -1,5 +1,147 @@
-"use strict";Object.defineProperty(exports,Symbol.toStringTag,{value:"Module"});const o=require("electron"),_=require("node:module"),m=require("node:url"),r=require("node:path");var s=typeof document<"u"?document.currentScript:null;const u=_.createRequire(typeof document>"u"?require("url").pathToFileURL(__filename).href:s&&s.tagName.toUpperCase()==="SCRIPT"&&s.src||new URL("main.js",document.baseURI).href),f=r.dirname(m.fileURLToPath(typeof document>"u"?require("url").pathToFileURL(__filename).href:s&&s.tagName.toUpperCase()==="SCRIPT"&&s.src||new URL("main.js",document.baseURI).href)),{dialog:w}=u("electron");process.env.APP_ROOT=r.join(f,"..");const c=process.env.VITE_DEV_SERVER_URL,P=r.join(process.env.APP_ROOT,"dist-electron"),p=r.join(process.env.APP_ROOT,"dist");process.env.VITE_PUBLIC=c?r.join(process.env.APP_ROOT,"public"):p;let n,R=u("fs");function h(){n=new o.BrowserWindow({icon:r.join(process.env.VITE_PUBLIC,"electron-vite.svg"),webPreferences:{preload:r.join(f,"preload.js"),nodeIntegration:!0,contextIsolation:!0,sandbox:!1,webSecurity:!1}}),n.webContents.on("did-finish-load",()=>{n==null||n.webContents.send("main-process-message",new Date().toLocaleString())}),c?n.loadURL(c):n.loadFile(r.join(p,"index.html")),n.webContents.on("devtools-opened",()=>{n.webContents.executeJavaScript(`
+"use strict";
+Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+const electron = require("electron");
+const node_module = require("node:module");
+const node_url = require("node:url");
+const path = require("node:path");
+var _documentCurrentScript = typeof document !== "undefined" ? document.currentScript : null;
+const require$1 = node_module.createRequire(typeof document === "undefined" ? require("url").pathToFileURL(__filename).href : _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("main.js", document.baseURI).href);
+const __dirname$1 = path.dirname(node_url.fileURLToPath(typeof document === "undefined" ? require("url").pathToFileURL(__filename).href : _documentCurrentScript && _documentCurrentScript.tagName.toUpperCase() === "SCRIPT" && _documentCurrentScript.src || new URL("main.js", document.baseURI).href));
+const fs = require$1("fs");
+process.env.APP_ROOT = path.join(__dirname$1, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+let win;
+function createWindow() {
+  win = new electron.BrowserWindow({
+    icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+    webPreferences: {
+      preload: path.join(__dirname$1, "preload.js"),
+      nodeIntegration: true,
+      // 推荐设置为false
+      contextIsolation: true,
+      // 必须为true才能使用contextBridge
+      sandbox: false,
+      // 根据需求设置
+      webSecurity: false
+      // 如果需要处理本地文件协议
+    }
+  });
+  win.webContents.on("did-finish-load", () => {
+    win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
+  });
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL);
+  } else {
+    win.loadFile(path.join(RENDERER_DIST, "index.html"));
+  }
+  win.webContents.on("devtools-opened", () => {
+    win.webContents.executeJavaScript(
+      `
       if (window.chrome && chrome.autofillPrivate) {
         // 避免自动填充API调用
       }
-    `).catch(()=>{})}),process.env.NODE_ENV==="development"&&n.webContents.openDevTools()}o.app.on("window-all-closed",()=>{process.platform!=="darwin"&&(o.app.quit(),n=null)});o.app.on("activate",()=>{o.BrowserWindow.getAllWindows().length===0&&h()});o.ipcMain.on("open-file",(l,e)=>{o.shell.openPath(e[0]).then(()=>{console.log("open file success",e[0])}).catch(t=>{console.error("open file error",e[0])})});o.ipcMain.handle("open-directory-dialog",async(l,e={})=>{const t={properties:["openDirectory","createDirectory"]};e.defaultPath&&(t.defaultPath=e.defaultPath),e.title&&(t.title=e.title);const i=await w.showOpenDialog(t);return!i.canceled&&i.filePaths.length>0?i.filePaths[0]:null});o.ipcMain.handle("copy-file",async(l,e,t)=>new Promise((i,d)=>{R.copyFile(e,t,a=>{a?d(a):i(!0)})}));o.ipcMain.handle("move-file",async(l,e,t)=>new Promise((i,d)=>{R.rename(e,t,a=>{a?d(a):i(!0)})}));o.app.whenReady().then(h);exports.MAIN_DIST=P;exports.RENDERER_DIST=p;exports.VITE_DEV_SERVER_URL=c;
+    `
+    ).catch(() => {
+    });
+  });
+  if (process.env.NODE_ENV === "development") {
+    win.webContents.openDevTools();
+  }
+}
+electron.app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    electron.app.quit();
+    win = null;
+  }
+});
+electron.app.on("activate", () => {
+  if (electron.BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
+});
+electron.ipcMain.on("open-file", (event, args) => {
+  electron.shell.openPath(args[0]).then(() => {
+    console.log("open file success", args[0]);
+  }).catch((error) => {
+    console.error("open file error", args[0]);
+  });
+});
+electron.ipcMain.on("start-drag-file", (event, filePath) => {
+  if (!filePath || !fs.existsSync(filePath)) {
+    return;
+  }
+  const dragIcon = electron.nativeImage.createFromDataURL(
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAK0lEQVR4AWP4//8/AzWAiSTVgA0wCkbj0QwGQxXQmAaQkYQxQGQyAAAt8xv7v6H8tQAAAABJRU5ErkJggg=="
+  );
+  event.sender.startDrag({
+    file: filePath,
+    icon: dragIcon
+  });
+});
+electron.ipcMain.handle("open-directory-dialog", async (event, options = {}) => {
+  const dialogOptions = {
+    properties: ["openDirectory", "createDirectory"]
+  };
+  if (options.defaultPath) {
+    dialogOptions.defaultPath = options.defaultPath;
+  }
+  if (options.title) {
+    dialogOptions.title = options.title;
+  }
+  const result = await electron.dialog.showOpenDialog(dialogOptions);
+  if (!result.canceled && result.filePaths.length > 0) {
+    return result.filePaths[0];
+  }
+  return null;
+});
+electron.ipcMain.handle("copy-file", async (event, sourcePath, destPath) => {
+  return new Promise((resolve, reject) => {
+    fs.copyFile(sourcePath, destPath, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(true);
+      }
+    });
+  });
+});
+electron.ipcMain.handle("move-file", async (event, sourcePath, destPath) => {
+  return new Promise((resolve, reject) => {
+    fs.rename(sourcePath, destPath, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(true);
+      }
+    });
+  });
+});
+electron.ipcMain.handle("check-file-exists", async (event, filePath) => {
+  return new Promise((resolve) => {
+    fs.access(filePath, fs.constants.F_OK, (err) => {
+      resolve(!err);
+    });
+  });
+});
+electron.ipcMain.handle("delete-file", async (event, filePath) => {
+  return new Promise((resolve, reject) => {
+    fs.unlink(filePath, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(true);
+      }
+    });
+  });
+});
+electron.ipcMain.handle("show-item-in-folder", async (event, filePath) => {
+  electron.shell.showItemInFolder(filePath);
+  return true;
+});
+electron.app.whenReady().then(createWindow);
+exports.MAIN_DIST = MAIN_DIST;
+exports.RENDERER_DIST = RENDERER_DIST;
+exports.VITE_DEV_SERVER_URL = VITE_DEV_SERVER_URL;

@@ -33,5 +33,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   openDirectoryDialog: (options = {}) => ipcRenderer.invoke('open-directory-dialog', options),
   copyFile: (sourcePath: string, destPath: string) => ipcRenderer.invoke('copy-file', sourcePath, destPath),
-  moveFile: (sourcePath: string, destPath: string) => ipcRenderer.invoke('move-file', sourcePath, destPath)
+  moveFile: (sourcePath: string, destPath: string) => ipcRenderer.invoke('move-file', sourcePath, destPath),
+  checkFileExists: (filePath: string) => ipcRenderer.invoke('check-file-exists', filePath),
+  deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
+  showItemInFolder: (filePath: string) => ipcRenderer.invoke('show-item-in-folder', filePath),
+  startDragFile: (filePath: string) => ipcRenderer.send('start-drag-file', filePath)
 });
