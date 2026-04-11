@@ -409,6 +409,16 @@ getMainSiderExpandChange((isExpand: boolean) => {
   background-color: rgba(66, 133, 244, 0.1);
 }
 
+/* 覆盖 FullCalendar 默认 today 的浅黄色 */
+:deep(.fc .fc-daygrid-day.fc-day-today) {
+  background-color: #1e6fff !important;
+}
+
+:deep(.fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number) {
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
 /* 确保日历单元格可以接收拖放 */
 :deep(.fc-daygrid-day) {
   position: relative;
