@@ -99,16 +99,40 @@ ipcMain.on('open-file', (event: any, args: any) => {
 });
 
 ipcMain.on('start-drag-file', (event: any, filePath: string) => {
-  if (!filePath || !fs.existsSync(filePath)) {
+  console.log('收到拖拽请求:', filePath);
+  
+  if (!filePath) {
+    console.error('文件路径为空');
     return;
   }
-  const dragIcon = nativeImage.createFromDataURL(
-    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAK0lEQVR4AWP4//8/AzWAiSTVgA0wCkbj0QwGQxXQmAaQkYQxQGQyAAAt8xv7v6H8tQAAAABJRU5ErkJggg=='
-  );
-  event.sender.startDrag({
-    file: filePath,
-    icon: dragIcon
-  });
+  
+  if (!fs.existsSync(filePath)) {
+    console.error('文件不存在:', filePath);
+    return;
+  }
+  
+  try {
+    console.log('准备启动拖拽，文件路径:', filePath);
+    
+    // 创建一个简单的图标
+    const dragIcon = nativeImage.createFromDataURL(
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAK0lEQVR4AWP4//8/AzWAiSTVgA0wCkbj0QwGQxXQmAaQkYQxQGQyAAAt8xv7v6H8tQAAAABJRU5ErkJggg=='
+    );
+    
+    console.log('调用 event.sender.startDrag');
+    
+    // 直接使用原始文件路径进行拖拽
+    event.sender.startDrag({
+      file: filePath,
+      icon: dragIcon,
+      copy: true
+    });
+    
+    console.log('拖拽已启动');
+  } catch (error) {
+    console.error('拖拽失败:', error);
+    console.error('错误详情:', (error as Error).stack);
+  }
 });
 
 ipcMain.handle('open-directory-dialog', async (event: any, options = {}) => {
@@ -178,6 +202,10 @@ ipcMain.handle('delete-file', async (event: any, filePath: string) => {
 ipcMain.handle('show-item-in-folder', async (event: any, filePath: string) => {
   shell.showItemInFolder(filePath);
   return true;
+});
+
+ipcMain.handle('get-desktop-path', async () => {
+  return app.getPath('desktop');
 });
 
 app.whenReady().then(createWindow);

@@ -37,5 +37,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkFileExists: (filePath: string) => ipcRenderer.invoke('check-file-exists', filePath),
   deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
   showItemInFolder: (filePath: string) => ipcRenderer.invoke('show-item-in-folder', filePath),
-  startDragFile: (filePath: string) => ipcRenderer.send('start-drag-file', filePath)
+  startDragFile: (filePath: string) => ipcRenderer.send('start-drag-file', filePath),
+  getDesktopPath: () => ipcRenderer.invoke('get-desktop-path')
 });

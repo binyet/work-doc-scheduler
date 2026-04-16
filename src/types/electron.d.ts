@@ -11,6 +11,7 @@ export class ElectronApi {
   deleteFile: (filePath: string) => Promise<any>;
   showItemInFolder: (filePath: string) => Promise<any>;
   startDragFile: (filePath: string) => void;
+  getDesktopPath: () => Promise<string>;
 }
 
 declare global {

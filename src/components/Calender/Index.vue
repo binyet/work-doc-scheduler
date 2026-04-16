@@ -16,6 +16,10 @@
             <el-icon><folder-opened /></el-icon>
             <span>打开文件位置</span>
           </el-dropdown-item>
+          <el-dropdown-item @click="saveFileAs">
+            <el-icon><download /></el-icon>
+            <span>另存为</span>
+          </el-dropdown-item>
         </el-dropdown-menu>
       </template>
     </context-menu>
@@ -33,10 +37,11 @@ import { useAppStoreWithOut } from '@/service/store/module/app';
 import { $dayjs } from '@/plugins/global';
 import ContextMenu from '@/components/ContextMenu/Index.vue';
 import { Wds } from '@/service/store/model/FileInfo';
-import { ElCheckbox, ElMessageBox } from 'element-plus';
+import { ElCheckbox, ElMessageBox, ElMessage } from 'element-plus';
 import { getMainSiderExpandChange } from '@/mitt/appGlobalChange';
 import { FileHelper } from '@/utils/FileHelper';
 import { h } from 'vue';
+import { Download } from '@element-plus/icons-vue';
 
 // 状态变量
 const fullCalendarRef = ref<any>(null);
@@ -159,35 +164,6 @@ function eventDidMount(e: EventMountArg) {
   if (!filePath) {
     return;
   }
-
-  const titleContainer = e.el.querySelector('.fc-event-title-container');
-  if (!titleContainer) {
-    return;
-  }
-
-  const dragHandle = document.createElement('span');
-  dragHandle.className = 'file-export-drag-handle';
-  dragHandle.setAttribute('draggable', 'true');
-  dragHandle.title = '拖拽到桌面/文件夹创建副本';
-  dragHandle.textContent = '⇗';
-
-  dragHandle.addEventListener('mousedown', (event) => {
-    event.stopPropagation();
-  });
-  dragHandle.addEventListener('click', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-  });
-  dragHandle.addEventListener('dragstart', (event) => {
-    event.stopPropagation();
-    if (event.dataTransfer) {
-      event.dataTransfer.setData('text/plain', filePath);
-      event.dataTransfer.effectAllowed = 'copy';
-    }
-    appStore.electronApi?.startDragFile(filePath);
-  });
-
-  titleContainer.appendChild(dragHandle);
 }
 
 function handleEventDragStart(arg: any) {
@@ -437,6 +413,44 @@ async function openFileLocation() {
   await (appStore.electronApi as any)?.showItemInFolder?.(targetFile.path);
 }
 
+/**
+ * 另存为文件
+ */
+async function saveFileAs() {
+  if (!currRightClickFileId.value) {
+    return;
+  }
+  const files = await dbHelper?.query<Wds.FileInfo>('wds', {
+    filter: (p: any) => p.id == currRightClickFileId.value
+  });
+  const targetFile = files?.[0];
+  if (!targetFile?.path) {
+    return;
+  }
+  
+  try {
+    const options = {
+      title: '另存为',
+      buttonLabel: '保存',
+      properties: ['openDirectory'],
+      defaultPath: await appStore.electronApi?.getDesktopPath()
+    };
+    
+    const result = await appStore.electronApi?.openDirectoryDialog(options);
+    if (result && typeof result === 'string') {
+      const destDir = result;
+      const fileName = targetFile.name || 'file';
+      const destPath = `${destDir}/${fileName}`;
+      
+      await appStore.electronApi?.copyFile(targetFile.path, destPath);
+      ElMessage.success('文件保存成功');
+    }
+  } catch (error) {
+    console.error('保存文件失败:', error);
+    ElMessage.error('文件保存失败');
+  }
+}
+
 async function initDocData(searchDates: string[] = []) {
   let files: Wds.FileInfo[] | undefined = [];
 
@@ -461,6 +475,8 @@ async function initDocData(searchDates: string[] = []) {
 
 // 设置全局拖拽事件处理
 onMounted(async () => {
+  // 初始化 Electron API
+  appStore.initElectronApi();
   await initDocData();
 
   (window as any).fullCalendar = fullCalendarRef.value;
@@ -501,21 +517,6 @@ getMainSiderExpandChange((isExpand: boolean) => {
 
 :deep(.fc-event) {
   cursor: pointer;
-}
-
-:deep(.file-export-drag-handle) {
-  float: right;
-  margin-left: 6px;
-  color: #ffffff;
-  opacity: 0.9;
-  cursor: grab;
-  font-size: 12px;
-  line-height: 1;
-  user-select: none;
-}
-
-:deep(.file-export-drag-handle:hover) {
-  opacity: 1;
 }
 
 :deep(.fc-day) {

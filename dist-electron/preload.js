@@ -34,5 +34,6 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   checkFileExists: (filePath) => electron.ipcRenderer.invoke("check-file-exists", filePath),
   deleteFile: (filePath) => electron.ipcRenderer.invoke("delete-file", filePath),
   showItemInFolder: (filePath) => electron.ipcRenderer.invoke("show-item-in-folder", filePath),
-  startDragFile: (filePath) => electron.ipcRenderer.send("start-drag-file", filePath)
+  startDragFile: (filePath) => electron.ipcRenderer.send("start-drag-file", filePath),
+  getDesktopPath: () => electron.ipcRenderer.invoke("get-desktop-path")
 });
